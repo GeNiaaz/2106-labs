@@ -1,8 +1,8 @@
 /*************************************
 * Lab 1 Exercise 2
-* Name:
-* Student No:
-* Lab Group:
+* Name: Muhammad Niaaz Wahab
+* Student No: A0200161E
+* Lab Group: B04
 *************************************/
 
 #include "node.h"
@@ -19,6 +19,7 @@
 // starting at 0).
 // Note: index is guaranteed to be valid.
 void insert_node_at(list *lst, int index, int data) {
+	node* newNode = malloc(
 }
 
 // Deletes node at index (counting from head starting from 0).
