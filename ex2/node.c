@@ -19,7 +19,10 @@
 // starting at 0).
 // Note: index is guaranteed to be valid.
 void insert_node_at(list *lst, int index, int data) {
-	node* newNode = malloc(
+	struct node* newNode = (struct node*)malloc(sizeof(struct node));
+
+	newNode->data = data;
+	
 }
 
 // Deletes node at index (counting from head starting from 0).
