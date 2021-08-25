@@ -122,19 +122,76 @@ void delete_node_at(list *lst, int index) {
 // Rotates list by the given offset.
 // Note: offset is guarenteed to be non-negative.
 void rotate_list(list *lst, int offset) {
+	node* nextNode = (node*)malloc(sizeof(node));
+	for (int i = 0;i < offset; i++) {
+		nextNode = lst->head;
+		lst->head = nextNode->next;
+	}
 }
 
 // Reverses the list, with the original "tail" node
 // becoming the new head node.
 void reverse_list(list *lst) {
+	if (lst->head->next == lst->head) {
+				
+	}
+
+	else {
+		node* prevNode = NULL;
+		node* currNode = lst->head;
+		node* nextNode;
+		node* headNode = lst->head;
+
+		while (nextNode != headNode) {
+			nextNode = currNode->next;
+			currNode->next = prevNode;
+			prevNode = currNode;
+
+			currNode = nextNode;
+			nextNode = currNode->next;
+		}
+		
+		currNode->next = prevNode;
+		headNode->next = currNode;
+		
+		lst->head = currNode;
+
+
+	}
+
 }
 
 // Resets list to an empty state (no nodes) and frees
 // any allocated memory in the process
 void reset_list(list *lst) {
+	node* currNode;
+	node* nextNode;
+	node* headNode;
+
+	headNode = lst->head;
+	currNode = headNode->next;
+	nextNode = currNode->next;
+	
+	if (currNode == nextNode) {
+		free(currNode);
+		lst->head = NULL;
+	}
+	
+	else {
+		while (nextNode != headNode) {
+			free(currNode);
+			currNode = nextNode;
+			nextNode = nextNode->next;
+		}
+
+		free(headNode);
+		lst->head = NULL;
+	}
+	
+
 }
 
-
+/*
 int main() {
 	
 	printf("running...\n");
@@ -149,8 +206,10 @@ int main() {
 	insert_node_at(lst, 2, 8);
 	insert_node_at(lst, 3, 11);
 
-	delete_node_at(lst, 0);
-	delete_node_at(lst, 2);
+	rotate_list(lst, 4);
+
+//	delete_node_at(lst, 0);
+//	delete_node_at(lst, 2);
 
 	node* curr = lst -> head;
 	while (curr->next != lst->head)  {
@@ -165,6 +224,7 @@ int main() {
 	return 0;
 }
 
+*/
 
 
 
