@@ -35,17 +35,18 @@ void insert_node_at(list *lst, int index, int data) {
 
 	// when index referenced is 0
 	else if (index == 0) {
-		newNode->next = lst->head;
-		// lst->head = newNode;
+		node* oldHead = lst->head;
+		newNode->next = oldHead;
 
-		node* lastNode = (node*)malloc(sizeof(node));
-		lastNode = newNode->next;
-		while (lastNode->next != lst->head) {
+		// node* lastNode = (node*)malloc(sizeof(node));
+		node* lastNode = oldHead->next;
+		// lastNode = newNode->next;
+		while (lastNode->next != oldHead) {
 			lastNode = lastNode->next;
 		}
 		
-		lst->head = newNode;
 		lastNode->next = newNode;
+		lst->head = newNode;
 	}
 	
 	// when index in middle or  end
@@ -124,11 +125,13 @@ void delete_node_at(list *lst, int index) {
 // Rotates list by the given offset.
 // Note: offset is guarenteed to be non-negative.
 void rotate_list(list *lst, int offset) {
-	node* nextNode = (node*)malloc(sizeof(node));
-	for (int i = 0;i < offset; i++) {
-		nextNode = lst->head;
-		lst->head = nextNode->next;
+	node* nextNode = lst->head;
+	for (int i = 0; i < offset; i++) {
+		nextNode = nextNode->next;
 	}
+	
+	lst->head = nextNode;
+
 }
 
 // Reverses the list, with the original "tail" node
@@ -139,24 +142,24 @@ void reverse_list(list *lst) {
 	}
 
 	else {
+
 		node* prevNode = NULL;
 		node* currNode = lst->head;
-		node* nextNode;
 		node* headNode = lst->head;
+		int count = 0;
 
-		while (nextNode != headNode) {
-			nextNode = currNode->next;
+		while (count == 0 || currNode != headNode) {
+			if (currNode == headNode) {
+				count++;
+			}
+			node* nextNode = currNode->next;
 			currNode->next = prevNode;
 			prevNode = currNode;
-
 			currNode = nextNode;
-			nextNode = currNode->next;
 		}
-		
-		currNode->next = prevNode;
-		headNode->next = currNode;
-		
-		lst->head = currNode;
+
+		headNode->next = prevNode;
+		lst->head = prevNode; 
 
 
 	}
@@ -166,6 +169,23 @@ void reverse_list(list *lst) {
 // Resets list to an empty state (no nodes) and frees
 // any allocated memory in the process
 void reset_list(list *lst) {
+
+	/*
+	if (lst->head == NULL) {
+			return;
+	}
+	node* head = lst->head;
+	node* nextnode = head->next;
+	while (nextnode != head) {
+	node* freenode = nextnode;
+	nextnode = nextnode->next;
+	free(freenode);
+	}
+	lst->head = NULL;
+	free(head);
+	*/
+
+	
 	node* currNode;
 	node* nextNode;
 	node* headNode;
@@ -190,14 +210,13 @@ void reset_list(list *lst) {
 		lst->head = NULL;
 	}
 	
-
 }
 
 // Traverses list and applies func on data values of
 // all elements in the list.
 void map(list *lst, int (*func)(int)) {
 	node* headNode = lst->head;
-	node* currNode = headNode->next;
+	node* currNode = headNode;
 
 	while(currNode->next != headNode) {
 		currNode->data = func(currNode->data);
@@ -215,7 +234,7 @@ long sum_list(list *lst) {
 	node* headNode = lst->head;
 	node* currNode = headNode->next;
 
-	long result = headNode->data;
+	long result = (long) headNode->data;
 
 	if (headNode == currNode) {
 		return result;
@@ -223,7 +242,8 @@ long sum_list(list *lst) {
 
 	else {
 		while (currNode != headNode) {
-			result = result + currNode->data;
+			long val = currNode->data;
+			result = result + val; 
 			currNode = currNode->next;
 		}
 		return result;

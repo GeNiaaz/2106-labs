@@ -33,17 +33,18 @@ void insert_node_at(list *lst, int index, int data) {
 
 	// when index referenced is 0
 	else if (index == 0) {
-		newNode->next = lst->head;
-		// lst->head = newNode;
+		node* oldHead = lst->head;
+		newNode->next = oldHead;
 
-		node* lastNode = (node*)malloc(sizeof(node));
-		lastNode = newNode->next;
-		while (lastNode->next != lst->head) {
+		// node* lastNode = (node*)malloc(sizeof(node));
+		node* lastNode = oldHead->next;
+		// lastNode = newNode->next;
+		while (lastNode->next != oldHead) {
 			lastNode = lastNode->next;
 		}
 		
-		lst->head = newNode;
 		lastNode->next = newNode;
+		lst->head = newNode;
 	}
 	
 	// when index in middle or  end
@@ -72,7 +73,6 @@ void delete_node_at(list *lst, int index) {
 	node* nodeToDelete = (node*)malloc(sizeof(node));
 	
 	if (lst->head == NULL) {
-		int i = 1;
 	}
 
 	else if (lst->head == lst->head->next) {
@@ -137,24 +137,24 @@ void reverse_list(list *lst) {
 	}
 
 	else {
+
 		node* prevNode = NULL;
 		node* currNode = lst->head;
-		node* nextNode;
 		node* headNode = lst->head;
+		int count = 0;
 
-		while (nextNode != headNode) {
-			nextNode = currNode->next;
+		while (count == 0 || currNode != headNode) {
+			if (currNode == headNode) {
+				count++;
+			}
+			node* nextNode = currNode->next;
 			currNode->next = prevNode;
 			prevNode = currNode;
-
 			currNode = nextNode;
-			nextNode = currNode->next;
 		}
-		
-		currNode->next = prevNode;
-		headNode->next = currNode;
-		
-		lst->head = currNode;
+
+		headNode->next = prevNode;
+		lst->head = prevNode; 
 
 
 	}
