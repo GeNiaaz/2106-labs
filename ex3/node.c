@@ -74,7 +74,7 @@ void delete_node_at(list *lst, int index) {
 	node* nodeToDelete = (node*)malloc(sizeof(node));
 	
 	if (lst->head == NULL) {
-		int i = 1;
+		
 	}
 
 	else if (lst->head == lst->head->next) {
@@ -196,7 +196,15 @@ void reset_list(list *lst) {
 // Traverses list and applies func on data values of
 // all elements in the list.
 void map(list *lst, int (*func)(int)) {
+	node* headNode = lst->head;
+	node* currNode = headNode->next;
+
+	while(currNode->next != headNode) {
+		currNode->data = func(currNode->data);
+		currNode = currNode->next;
+	}
 	
+	currNode->data = func(currNode->data);
 
 }
 
