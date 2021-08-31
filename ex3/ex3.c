@@ -33,7 +33,7 @@ void run_instructions(FILE *fptr, list *lst, int instr);
 void print_list(list *lst);
 
 int main(int argc, char **argv) {
-		/*
+		
 		if (argc != 2) {
 				fprintf(stderr, "Error: expecting 1 argument, %d found\n", argc - 1);
 				exit(1);
@@ -57,47 +57,45 @@ int main(int argc, char **argv) {
 				printf("Unable to open file\n");
 				exit(2);
 		}
-		*/
+		
 
 		list *lst = (list*)malloc(sizeof(list));
 		lst->head = NULL;
 		int instr;
 
-		insert_node_at(lst, 0, 39);
-		insert_node_at(lst, 1, 29);
-		insert_node_at(lst, 2, 63);
-		print_list(lst);
+		// insert_node_at(lst, 0, 39);
+		// insert_node_at(lst, 1, 29);
+		// insert_node_at(lst, 2, 63);
+		// print_list(lst);
 
-		map(lst, func_list[3]);
-		insert_node_at(lst, 2, 11);
-		printf("%ld\n", sum_list(lst));
-		rotate_list(lst, 3);
-		insert_node_at(lst, 2, 80);
-		delete_node_at(lst, 1);
-		printf("%ld\n", sum_list(lst));
-		reset_list(lst);
-		insert_node_at(lst, 1, 54);
-		print_list(lst);
-		delete_node_at(lst, 0);
-		print_list(lst);
-
-
-
-
-
-		// while (fscanf(fptr, "%d", &instr) == 1) {
-		// 		run_instructions(fptr, lst, instr);
-		// }
-		
+		// map(lst, func_list[3]);
+		// insert_node_at(lst, 2, 11);
+		// printf("%ld\n", sum_list(lst));
+		// rotate_list(lst, 3);
+		// insert_node_at(lst, 2, 80);
+		// delete_node_at(lst, 1);
+		// printf("%ld\n", sum_list(lst));
 		// reset_list(lst);
-		// free(lst);
+		// insert_node_at(lst, 1, 54);
+		// print_list(lst);
+		// delete_node_at(lst, 0);
+		// print_list(lst);
+
+
+		while (fscanf(fptr, "%d", &instr) == 1) {
+			run_instructions(fptr, lst, instr);
+		}
+		fclose(fptr);
+		
+		reset_list(lst);
+		free(lst);
 }
 
 void run_instructions(FILE *fptr, list *lst, int instr) {
 		
 		int index, data, offset;
 		long sumResult;
-
+		
 		switch (instr) {
 
 				case SUM_LIST:
@@ -113,7 +111,6 @@ void run_instructions(FILE *fptr, list *lst, int instr) {
 						break;
 				case DELETE_AT:
 						fscanf(fptr, "%d", &index);
-						// printf("delete %d\n", index);
 						delete_node_at(lst, index);
 						break;
 				case ROTATE_LIST:

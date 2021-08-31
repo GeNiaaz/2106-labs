@@ -20,6 +20,25 @@
 // starting at 0).
 // Note: index is guaranteed to be valid.
 
+
+// DELETE LATER
+
+void print_list2(list *lst) {
+    if (lst->head == NULL) {
+        printf("[ ]\n");
+        return;
+    }
+
+    printf("[ ");
+    node *curr = lst->head;
+    do {
+        printf("%d ", curr->data);
+        curr = curr->next;
+    } while (curr != lst->head);
+    printf("]\n");
+}
+
+
 void insert_node_at(list *lst, int index, int data) {
 	
 
@@ -68,30 +87,35 @@ void insert_node_at(list *lst, int index, int data) {
 	
 }
 
+
 // Deletes node at index (counting from head starting from 0).
 // Note: index is guarenteed to be valid.
 void delete_node_at(list *lst, int index) {
 	
-	node* nodeToDelete = (node*)malloc(sizeof(node));
+	node* nodeToDelete;
+	node* nextNode;
+	node* headNode = lst->head;
+
+
 	
-	if (lst->head == NULL) {
-		
+	if (headNode == NULL) {
+		return;
 	}
 
-	else if (lst->head == lst->head->next) {
-		free(lst->head);
+	else if (headNode == headNode->next) {
+		free(headNode);
 		lst->head = NULL;
 	}
 
 	else if (index == 0) {
-		node* nextNode = (node*)malloc(sizeof(node));
-		node* lastNode = (node*)malloc(sizeof(node));
+		node* nextNode;
+		node* lastNode;
 
-		nodeToDelete = lst->head;
+		nodeToDelete = headNode;
 		nextNode = nodeToDelete->next;
 		
 		lastNode = nodeToDelete->next;
-		while (lastNode->next != lst->head) {
+		while (lastNode->next != headNode) {
 			lastNode = lastNode->next;
 		}
 		
@@ -103,8 +127,7 @@ void delete_node_at(list *lst, int index) {
 	}
 
 	else {
-		node* previousNode = (node*)malloc(sizeof(node));
-		node* nextNode = (node*)malloc(sizeof(node));
+		node* previousNode;
 		
 		previousNode = lst->head;
 
@@ -137,7 +160,12 @@ void rotate_list(list *lst, int offset) {
 // Reverses the list, with the original "tail" node
 // becoming the new head node.
 void reverse_list(list *lst) {
-	if (lst->head->next == lst->head) {
+
+	if (lst->head == NULL) {
+
+	}
+
+	else if (lst->head->next == lst->head) {
 				
 	}
 
@@ -160,8 +188,6 @@ void reverse_list(list *lst) {
 
 		headNode->next = prevNode;
 		lst->head = prevNode; 
-
-
 	}
 
 }
@@ -191,6 +217,11 @@ void reset_list(list *lst) {
 	node* headNode;
 
 	headNode = lst->head;
+
+	if (headNode == NULL) {
+		return;
+	}
+
 	currNode = headNode->next;
 	nextNode = currNode->next;
 	
@@ -218,12 +249,18 @@ void map(list *lst, int (*func)(int)) {
 	node* headNode = lst->head;
 	node* currNode = headNode;
 
-	while(currNode->next != headNode) {
-		currNode->data = func(currNode->data);
-		currNode = currNode->next;
+	if (headNode == NULL) {
+		return;
 	}
-	
-	currNode->data = func(currNode->data);
+
+	else {
+		while(currNode->next != headNode) {
+			currNode->data = func(currNode->data);
+			currNode = currNode->next;
+		}
+		
+		currNode->data = func(currNode->data);
+	}
 
 }
 
