@@ -14,5 +14,4 @@ gcc -std=c99 pid_checker.c -o ex6
 
 # Use strace to get report
 
-./ex6
-strace -c ls
+strace -c ./ex6

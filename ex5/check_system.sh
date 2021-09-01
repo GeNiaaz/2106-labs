@@ -11,7 +11,7 @@
 hostname=$(hostname)
 machine_hardware=$(uname -s -p)
 max_user_process_count=$(ulimit -a -u | grep processes | awk '{ print $5}')
-user_process_count=$(ps -U niaaz | wc -l)
+user_process_count=$(ps -u | wc -l)
 user_with_most_processes=$(ps -eo user|sort|uniq -c|sort -n -r|awk 'NR==1'| awk '{ print $2}')
 mem_free_percentage=$(free | grep Mem | awk '{ print ($4 / $2) * 100}')
 swap_free_percentage=$(free | grep Swap | awk '{ print ($4 / $2) * 100}')
