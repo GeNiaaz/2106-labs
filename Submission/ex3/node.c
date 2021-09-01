@@ -1,8 +1,8 @@
 /*************************************
-* Lab 1 Exercise 2
-* Name: Muhammad Niaaz Wahab
-* Student No: A0200161E
-* Lab Group: B04
+* Lab 1 Exercise 3
+* Name:
+* Student No:
+* Lab Group:
 *************************************/
 
 #include "node.h"
@@ -12,12 +12,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Add in your implementation below to the respective functions
-// Feel free to add any headers you deem fit (although you do not need to)
+// Copy in your implementation of the functions from ex2.
+// There is one extra function called map which you have to fill up too.
+// Feel free to add any new functions as you deem fit.
 
 // Inserts a new node with data value at index (counting from head
 // starting at 0).
 // Note: index is guaranteed to be valid.
+
+
+
 void insert_node_at(list *lst, int index, int data) {
 	
 
@@ -64,29 +68,35 @@ void insert_node_at(list *lst, int index, int data) {
 	
 }
 
+
 // Deletes node at index (counting from head starting from 0).
 // Note: index is guarenteed to be valid.
 void delete_node_at(list *lst, int index) {
 	
-	node* nodeToDelete = (node*)malloc(sizeof(node));
+	node* nodeToDelete;
+	node* nextNode;
+	node* headNode = lst->head;
+
+
 	
-	if (lst->head == NULL) {
+	if (headNode == NULL) {
+		return;
 	}
 
-	else if (lst->head == lst->head->next) {
-		free(lst->head);
+	else if (headNode == headNode->next) {
+		free(headNode);
 		lst->head = NULL;
 	}
 
 	else if (index == 0) {
-		node* nextNode = (node*)malloc(sizeof(node));
-		node* lastNode = (node*)malloc(sizeof(node));
+		node* nextNode;
+		node* lastNode;
 
-		nodeToDelete = lst->head;
+		nodeToDelete = headNode;
 		nextNode = nodeToDelete->next;
 		
 		lastNode = nodeToDelete->next;
-		while (lastNode->next != lst->head) {
+		while (lastNode->next != headNode) {
 			lastNode = lastNode->next;
 		}
 		
@@ -98,8 +108,7 @@ void delete_node_at(list *lst, int index) {
 	}
 
 	else {
-		node* previousNode = (node*)malloc(sizeof(node));
-		node* nextNode = (node*)malloc(sizeof(node));
+		node* previousNode;
 		
 		previousNode = lst->head;
 
@@ -120,17 +129,24 @@ void delete_node_at(list *lst, int index) {
 // Rotates list by the given offset.
 // Note: offset is guarenteed to be non-negative.
 void rotate_list(list *lst, int offset) {
-	node* nextNode = (node*)malloc(sizeof(node));
-	for (int i = 0;i < offset; i++) {
-		nextNode = lst->head;
-		lst->head = nextNode->next;
+	node* nextNode = lst->head;
+	for (int i = 0; i < offset; i++) {
+		nextNode = nextNode->next;
 	}
+	
+	lst->head = nextNode;
+
 }
 
 // Reverses the list, with the original "tail" node
 // becoming the new head node.
 void reverse_list(list *lst) {
-	if (lst->head->next == lst->head) {
+
+	if (lst->head == NULL) {
+
+	}
+
+	else if (lst->head->next == lst->head) {
 				
 	}
 
@@ -153,8 +169,6 @@ void reverse_list(list *lst) {
 
 		headNode->next = prevNode;
 		lst->head = prevNode; 
-
-
 	}
 
 }
@@ -193,3 +207,49 @@ void reset_list(list *lst) {
 	}
 	
 }
+
+// Traverses list and applies func on data values of
+// all elements in the list.
+void map(list *lst, int (*func)(int)) {
+	node* headNode = lst->head;
+	node* currNode = headNode;
+
+	if (headNode == NULL) {
+		return;
+	}
+
+	else {
+		while(currNode->next != headNode) {
+			currNode->data = func(currNode->data);
+			currNode = currNode->next;
+		}
+		
+		currNode->data = func(currNode->data);
+	}
+
+}
+
+// Traverses list and returns the sum of the data values
+// of every node in the list.
+long sum_list(list *lst) {
+
+	node* headNode = lst->head;
+	node* currNode = headNode->next;
+
+	long result = (long) headNode->data;
+
+	if (headNode == currNode) {
+		return result;
+	}
+
+	else {
+		while (currNode != headNode) {
+			long val = currNode->data;
+			result = result + val; 
+			currNode = currNode->next;
+		}
+		return result;
+	}
+
+}
+
