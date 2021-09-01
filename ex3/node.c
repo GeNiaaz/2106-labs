@@ -64,10 +64,7 @@ void insert_node_at(list *lst, int index, int data) {
 		newNode->next = previousNode->next;
 		previousNode->next = newNode;
 
-		// free(previousNode);
-		// free(nextNode);
 	}	
-	// free(newNode);
 	
 }
 

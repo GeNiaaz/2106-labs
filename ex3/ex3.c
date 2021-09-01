@@ -26,11 +26,8 @@
 #define RESET_LIST 5
 #define MAP 6
 
-#define PRINT_LIST 7
-
 
 void run_instructions(FILE *fptr, list *lst, int instr);
-void print_list(list *lst);
 
 int main(int argc, char **argv) {
 		
@@ -48,7 +45,6 @@ int main(int argc, char **argv) {
 		update_functions();
 
 		// Rest of code logic here
-		//if fname != ...		
 
 		FILE *fptr = fopen(fname, "r");
 		
@@ -62,24 +58,6 @@ int main(int argc, char **argv) {
 		list *lst = (list*)malloc(sizeof(list));
 		lst->head = NULL;
 		int instr;
-
-		// insert_node_at(lst, 0, 39);
-		// insert_node_at(lst, 1, 29);
-		// insert_node_at(lst, 2, 63);
-		// print_list(lst);
-
-		// map(lst, func_list[3]);
-		// insert_node_at(lst, 2, 11);
-		// printf("%ld\n", sum_list(lst));
-		// rotate_list(lst, 3);
-		// insert_node_at(lst, 2, 80);
-		// delete_node_at(lst, 1);
-		// printf("%ld\n", sum_list(lst));
-		// reset_list(lst);
-		// insert_node_at(lst, 1, 54);
-		// print_list(lst);
-		// delete_node_at(lst, 0);
-		// print_list(lst);
 
 
 		while (fscanf(fptr, "%d", &instr) == 1) {
@@ -130,24 +108,5 @@ void run_instructions(FILE *fptr, list *lst, int instr) {
 						fscanf(fptr, "%d", &data);
 						// printf("map %d\n", data);
 						map(lst, func_list[data]);
-						break;
-				case PRINT_LIST:
-						print_list(lst);
 		}
-}
-
-
-void print_list(list *lst) {
-    if (lst->head == NULL) {
-        printf("[ ]\n");
-        return;
-    }
-
-    printf("[ ");
-    node *curr = lst->head;
-    do {
-        printf("%d ", curr->data);
-        curr = curr->next;
-    } while (curr != lst->head);
-    printf("]\n");
 }
