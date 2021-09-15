@@ -32,13 +32,14 @@ void insert_node_at(int pid, int status, int exit_status) {
 
         node* newNode = (node*)malloc(sizeof(node));
         newNode->pid = pid;
-    newNode->status = status;
-    newNode->exit_status = exit_status;
+        newNode->status = status;
+        newNode->exit_status = exit_status;
 
         // when list empty
         if (lst->head == NULL) {
-                newNode->next = newNode;
-                lst->head = newNode;
+
+            newNode->next = NULL;
+            lst->head = newNode;
         }
 
         // when index in middle or  end
@@ -47,21 +48,20 @@ void insert_node_at(int pid, int status, int exit_status) {
 
                 previousNode = lst->head;
 
-                while (previousNode->next != lst->head) {
+                while (previousNode->next != NULL) {
                         previousNode = previousNode->next;
                 }
 
-                newNode->next = lst->head;
+                newNode->next = NULL;
                 previousNode->next = newNode;
         }
 
 }
 
 void update_node(int pid, int status, int exit_status) {
-        node* currNode;
+    node* currNode;
     currNode = lst->head;
 
-    printf("GOT HERE!!\n");
 
 
         while (currNode->pid != pid) {
@@ -86,12 +86,13 @@ void print_statuses(void) {
     }
 
     node *curr = lst->head;
-    do {
-        if (curr->pid == 0) {
+    while (curr->next != NULL) {
+        if (curr->status == 0) {
+            waitpid(curr->pid, &status, WNOHANG);
             printf("[%d] Running\n", curr->pid);
         }
 
-        else if (curr->pid == 1) {
+        else if (curr->status == 1) {
 
             printf("[%d] Exited %d\n", curr->pid, curr->exit_status);
         }
@@ -99,15 +100,13 @@ void print_statuses(void) {
         else {
             printf("THIS SHOULD NOT SHOW UP, LINE 92\n");
         }
+    }
 
-        curr = curr->next;
-    } while (curr != lst->head);
 }
 
 void my_quit(void) {
     // Clean up function, called after "quit" is entered as a user command
     printf("Goodbye!\n");
-    exit(0);
 }
 
 void handle_info(void) {
@@ -133,10 +132,8 @@ void handle_process(int* child_pid, char **tokens) {
     if (*child_pid == -1) {
         EXIT_FAILURE;
     }
+    insert_node_at(*child_pid, 0, 0);
     if (*child_pid == 0) {
-        int pid = getpid();
-        insert_node_at(pid, 0, 0);
-
         execv(tokens[0], tokens);
         EXIT_FAILURE;
     }
@@ -158,7 +155,7 @@ void my_process_command(size_t num_tokens, char **tokens) {
     }
 
     // Execute program
-    int status;
+    int exit_status = -5;
     int child_pid = fork();
 
     if (_print_child_pid_status == 0) {
@@ -167,13 +164,10 @@ void my_process_command(size_t num_tokens, char **tokens) {
 
     else {
         handle_process(&child_pid, tokens);
-        waitpid(child_pid, &status, 0);
-        // PROBLEM IS HERREEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
-        printf("first is: %d\n", lst->head->pid);
-        update_node(child_pid, 1, status);
+        waitpid(child_pid, &exit_status, 0);
 
-        printf("exit status is: %d\n", status);
-        print_statuses();
+        update_node(child_pid, 1, exit_status);
+
     }
 
 }
