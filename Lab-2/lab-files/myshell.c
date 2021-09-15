@@ -62,11 +62,9 @@ void update_node(int pid, int status, int exit_status) {
     node* currNode;
     currNode = lst->head;
 
-
-
-        while (currNode->pid != pid) {
-                currNode = currNode->next;
-        }
+    while (currNode->pid != pid) {
+            currNode = currNode->next;
+    }
 
     currNode->status = status;
     currNode->exit_status = exit_status;
@@ -86,20 +84,38 @@ void print_statuses(void) {
     }
 
     node *curr = lst->head;
-    while (curr->next != NULL) {
+    while (curr != NULL) {
+
+        // if running process, check whether exit or not
         if (curr->status == 0) {
-            waitpid(curr->pid, &status, WNOHANG);
-            printf("[%d] Running\n", curr->pid);
+            int new_status;
+
+            // check for fail
+            if (waitpid(curr->pid, &new_status, WNOHANG) == 1) {
+                EXIT_FAILURE;
+            }
+
+            // newly exited processes
+            if (WIFEXITED(new_status)) {
+                printf("[%d] Exited %d\n", curr->pid, new_status);
+            }
+             
+            // process still running
+            else {
+                printf("[%d] Running\n", curr->pid);
+            }
         }
 
+        // for exited processes
         else if (curr->status == 1) {
-
             printf("[%d] Exited %d\n", curr->pid, curr->exit_status);
         }
 
         else {
             printf("THIS SHOULD NOT SHOW UP, LINE 92\n");
         }
+    
+        curr = curr->next;
     }
 
 }
@@ -118,13 +134,16 @@ void handle_background(size_t* num_tokens, int* child_pid, char **tokens) {
     if (*child_pid == -1) {
         EXIT_FAILURE;
     }
+    insert_node_at(*child_pid, 0, 0);
+
     tokens[(int)*num_tokens - 2] = NULL;
     if (*child_pid == 0) {
-        int pid = getpid();
-        insert_node_at(pid, 0, 0);
-        printf("Child[%d] in background", *child_pid);
         execv(tokens[0], tokens);
         EXIT_FAILURE;
+    }
+    else {
+        printf("Child[%d] in background\n", *child_pid);
+        return;
     }
 }
 
@@ -152,6 +171,7 @@ void my_process_command(size_t num_tokens, char **tokens) {
     // info
     if (strcmp(tokens[0], "info") == 0) {
         handle_info();
+        return;
     }
 
     // Execute program
