@@ -13,6 +13,10 @@
 #include <unistd.h>
 #include <string.h>
 
+#define RUNNING 1
+#define EXITED 2
+// #define RUNNING 3
+
 typedef struct NODE {
     int pid;
     int status;
@@ -85,29 +89,32 @@ void print_statuses(void) {
 
     node *curr = lst->head;
     while (curr != NULL) {
-
+        
         // if running process, check whether exit or not
-        if (curr->status == 0) {
+        if (curr->status == RUNNING) {
             int new_status;
-
             // check for fail
-            if (waitpid(curr->pid, &new_status, WNOHANG) == 1) {
+            int result = waitpid(curr->pid, &new_status, WNOHANG);
+            if (result == -1) {
                 EXIT_FAILURE;
             }
 
             // newly exited processes
             if (WIFEXITED(new_status)) {
+                update_node(curr->pid, EXITED, new_status);
                 printf("[%d] Exited %d\n", curr->pid, new_status);
+
             }
              
             // process still running
             else {
                 printf("[%d] Running\n", curr->pid);
+                
             }
         }
 
         // for exited processes
-        else if (curr->status == 1) {
+        else if (curr->status == EXITED) {
             printf("[%d] Exited %d\n", curr->pid, curr->exit_status);
         }
 
@@ -134,12 +141,12 @@ void handle_background(size_t* num_tokens, int* child_pid, char **tokens) {
     if (*child_pid == -1) {
         EXIT_FAILURE;
     }
-    insert_node_at(*child_pid, 0, 0);
+    insert_node_at(*child_pid, RUNNING, 0);
 
     tokens[(int)*num_tokens - 2] = NULL;
     if (*child_pid == 0) {
         execv(tokens[0], tokens);
-        EXIT_FAILURE;
+        printf("%s not found\n", tokens[0]);
     }
     else {
         printf("Child[%d] in background\n", *child_pid);
@@ -151,10 +158,11 @@ void handle_process(int* child_pid, char **tokens) {
     if (*child_pid == -1) {
         EXIT_FAILURE;
     }
+    
     insert_node_at(*child_pid, 0, 0);
     if (*child_pid == 0) {
         execv(tokens[0], tokens);
-        EXIT_FAILURE;
+        printf("%s not found\n", tokens[0]);
     }
     else {
         return;
@@ -176,6 +184,13 @@ void my_process_command(size_t num_tokens, char **tokens) {
 
     // Execute program
     int exit_status = -5;
+
+    // if file does not exist
+    if(access( tokens[0], F_OK ) == -1 ) {
+        printf("%s not found\n", tokens[0]);
+        return;
+    }
+
     int child_pid = fork();
 
     if (_print_child_pid_status == 0) {
@@ -185,8 +200,12 @@ void my_process_command(size_t num_tokens, char **tokens) {
     else {
         handle_process(&child_pid, tokens);
         waitpid(child_pid, &exit_status, 0);
+        int status_code;
+        if (WIFEXITED(exit_status)) { 
+            status_code = WEXITSTATUS(exit_status);
+        }
 
-        update_node(child_pid, 1, exit_status);
+        update_node(child_pid, EXITED, status_code);
 
     }
 
