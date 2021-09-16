@@ -15,7 +15,7 @@
 
 #define RUNNING 1
 #define EXITED 2
-// #define RUNNING 3
+#define TERMINATED 3
 
 typedef struct NODE {
     int pid;
@@ -137,6 +137,17 @@ void handle_info(void) {
     return;
 }
 
+void handle_wait(char pid[]) {
+    int p = atoi(pid);
+
+    int exit_status;
+    waitpid(p, &exit_status, 0);
+    int status_code;
+    status_code = WEXITSTATUS(exit_status);
+    update_node(p, EXITED, status_code);
+
+}
+
 void handle_background(size_t* num_tokens, int* child_pid, char **tokens) {
     if (*child_pid == -1) {
         EXIT_FAILURE;
@@ -182,6 +193,12 @@ void my_process_command(size_t num_tokens, char **tokens) {
         return;
     }
 
+    // wait
+    if (strcmp(tokens[0], "wait") == 0) {
+        handle_wait(tokens[1]);
+        return;
+    } 
+
     // Execute program
     int exit_status = -5;
 
@@ -193,10 +210,12 @@ void my_process_command(size_t num_tokens, char **tokens) {
 
     int child_pid = fork();
 
+    // handle background process
     if (_print_child_pid_status == 0) {
         handle_background(&num_tokens, &child_pid, tokens);
     }
 
+    // handle regular process
     else {
         handle_process(&child_pid, tokens);
         waitpid(child_pid, &exit_status, 0);
