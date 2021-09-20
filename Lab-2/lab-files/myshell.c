@@ -280,6 +280,7 @@ void handle_chain(size_t* num_tokens, char **tokens) {
             update_node(child_pid, EXITED, status_code);
 
             if (exit_status != 0) {
+                printf("%s failed\n", curr_commands[0]);
                 return;
             }
 
@@ -320,6 +321,7 @@ void handle_chain(size_t* num_tokens, char **tokens) {
     update_node(child_pid, EXITED, status_code);
 
     if (exit_status != 0) {
+        printf("%s failed\n", curr_commands[0]);
         return;
     }
 
