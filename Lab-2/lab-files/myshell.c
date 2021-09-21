@@ -62,55 +62,6 @@ void insert_node_at(int pid, int status, int exit_status) {
 
 }
 
-// void delete_node(int pid) {
-//     node* nodeToDelete;
-// 	node* headNode = lst->head;
-
-// 	if (headNode == NULL) {
-// 		return;
-// 	}
-
-// 	else if (headNode->next == NULL) {
-// 		free(headNode);
-// 		lst->head = NULL;
-// 	}
-
-// 	else if (headNode->pid == pid) {
-// 		node* nextNode;
-// 		node* lastNode;
-
-// 		nodeToDelete = headNode;
-// 		nextNode = nodeToDelete->next;
-		
-// 		lastNode = nodeToDelete->next;
-// 		while (lastNode->next != headNode) {
-// 			lastNode = lastNode->next;
-// 		}
-		
-// 		lst->head = nextNode;
-
-// 		free(nodeToDelete);
-
-// 	}
-
-// 	else {
-// 		node* nextNode;
-//         node* previousNode;
-		
-// 		nextNode = lst->head;
-
-// 		while (nextNode->pid != pid){
-// 			previousNode = nextNode;
-//             nextNode = nextNode->next;
-// 		}
-
-// 		previousNode->next = nextNode->next;
-
-// 		free(nextNode);
-
-// 	}
-// }
-
 void update_node(int pid, int status, int exit_status) {
     node* currNode;
     currNode = lst->head;
@@ -150,7 +101,7 @@ void print_statuses(void) {
             }
 
             // newly exited processes
-            if (WIFEXITED(new_status)) {
+            if (result > 0) {
                 update_node(curr->pid, EXITED, WEXITSTATUS(new_status));
                 printf("[%d] Exited %d\n", curr->pid, WEXITSTATUS(new_status));
 
@@ -224,8 +175,8 @@ void my_quit(void) {
     printf("Goodbye!\n");
 }
 
-int check_chain(size_t* num_tokens, char **tokens) {
-    for (int i = 0; i < (int) *num_tokens - 1; i++) {
+int check_chain(int num_tokens, char **tokens) {
+    for (int i = 0; i < (int) num_tokens - 1; i++) {
         if (strcmp(tokens[i], "&&") == 0) { 
             return 1;
         }
@@ -233,56 +184,78 @@ int check_chain(size_t* num_tokens, char **tokens) {
     return 0;
 }
 
-void handle_process(int* child_pid, char **tokens) {
-    if (*child_pid == -1) {
-        EXIT_FAILURE;
+int handle_process(int num_tokens, char **tokens) {
+
+    // check if background process 
+    int background_process_status = strcmp(tokens[num_tokens - 2], "&");
+
+    // check if command is there
+    if(access( tokens[0], F_OK ) == -1 ) {
+        printf("%s not found\n", tokens[0]);
+        return 1;
     }
-    
-    insert_node_at(*child_pid, 0, 0);
-    if (*child_pid == 0) {
+
+    // FORKED here
+    int child_pid = fork();
+
+    if (background_process_status == 0) {
+        tokens[num_tokens - 2] = NULL;
+    }
+
+    // only child execute
+    if (child_pid == 0) {
         execv(tokens[0], tokens);
-        // printf("%s not found\n", tokens[0]);
-    }
+    } 
+
+    // parent process part
     else {
-        return;
+
+        insert_node_at(child_pid, RUNNING, 0);
+
+        // background process quits here
+        if (background_process_status == 0) {
+            printf("Child[%d] in background\n", child_pid);
+            return 1;
+        }
+
+        int exit_status;
+        int status_code;
+
+        waitpid(child_pid, &exit_status, 0);
+        
+        if (WIFEXITED(exit_status)) { 
+            status_code = WEXITSTATUS(exit_status);
+        }
+
+        update_node(child_pid, EXITED, status_code);
+
+        // for failed command execution
+        if (exit_status != 0) {
+            printf("%s failed\n", tokens[0]);
+            return 1;
+        }
     }
+    return 0;
+
+    
 }
 
-void handle_chain(size_t* num_tokens, char **tokens) {
+void handle_chain(int num_tokens, char **tokens) {
 
     // outer loop
-    char *curr_commands[(int)*num_tokens];
+    char *curr_commands[num_tokens];
     int arr_index = 0;
 
-    for (int i = 0; i < (int)*num_tokens - 1; i++) {
+    for (int i = 0; i < num_tokens - 1; i++) {
         
         if (strcmp(tokens[i], "&&") == 0) {
 
             curr_commands[arr_index] = NULL;
+            int failure = handle_process(arr_index, curr_commands);
+            if (failure == 1) {
+                return;
+            }
             arr_index = 0;
-
-            if(access( curr_commands[0], F_OK ) == -1 ) {
-                printf("%s not found\n", curr_commands[0]);
-                return;
-            }
-        
-            int child_pid = fork();
-            handle_process(&child_pid, curr_commands);
-
-            int exit_status;
-            waitpid(child_pid, &exit_status, 0);
-            int status_code;
-
-            if (WIFEXITED(exit_status)) { 
-                status_code = WEXITSTATUS(exit_status);
-            }
-
-            update_node(child_pid, EXITED, status_code);
-
-            if (exit_status != 0) {
-                printf("%s failed\n", curr_commands[0]);
-                return;
-            }
 
         }
         
@@ -295,35 +268,11 @@ void handle_chain(size_t* num_tokens, char **tokens) {
     }
 
     curr_commands[arr_index] = NULL;
-
-    if(access( curr_commands[0], F_OK ) == -1 ) {
-        printf("%s not found\n", curr_commands[0]);
+    int failure = handle_process(arr_index, curr_commands);
+    if (failure == 1) {
         return;
     }
-
-    int child_pid = fork();
-    handle_process(&child_pid, curr_commands);
-
-    int exit_status;
-    waitpid(child_pid, &exit_status, 0);
-    int status_code;
-
-    // if (exit_status != 0) {
-    //     printf("NODE DELETED\n");
-    //     delete_node(child_pid);
-    //     return;
-    // }
-
-    if (WIFEXITED(exit_status)) { 
-        status_code = WEXITSTATUS(exit_status);
-    }
-
-    update_node(child_pid, EXITED, status_code);
-
-    if (exit_status != 0) {
-        printf("%s failed\n", curr_commands[0]);
-        return;
-    }
+    arr_index = 0;
 
 }
 
@@ -360,36 +309,10 @@ void handle_terminate(char pid[]) {
     
 }
 
-void handle_background(size_t* num_tokens, int* child_pid, char **tokens) {
-    if (*child_pid == -1) {
-        EXIT_FAILURE;
-    }
-    insert_node_at(*child_pid, RUNNING, 0);
-
-    tokens[(int)*num_tokens - 2] = NULL;
-    if (*child_pid == 0) {
-        execv(tokens[0], tokens);
-        printf("%s not found\n", tokens[0]);
-    }
-    else {
-        printf("Child[%d] in background\n", *child_pid);
-        return;
-    }
-}
-
 // ORIGINAL PROCESS COMMAND
 
 void my_process_command(size_t num_tokens, char **tokens) {
     // Your code here, refer to the lab document for a description of the arguments
-
-    // && symbol chaining logic 
-    if (check_chain(&num_tokens, tokens) == 1) {
-        handle_chain(&num_tokens, tokens);
-        return;
-    }
-
-    // & symbol logic
-    int _print_child_pid_status = strcmp(tokens[num_tokens - 2], "&");
 
     // info
     if (strcmp(tokens[0], "info") == 0) {
@@ -409,41 +332,13 @@ void my_process_command(size_t num_tokens, char **tokens) {
         return;
     }
 
-    // Execute program
-    int exit_status = -5;
-
-    // if file does not exist
-    if(access( tokens[0], F_OK ) == -1 ) {
-        printf("%s not found\n", tokens[0]);
+    // && symbol chaining logic 
+    if (check_chain((int)num_tokens, tokens) == 1) {
+        handle_chain((int)num_tokens, tokens);
         return;
     }
 
-    int child_pid = fork();
-
-    // handle background process
-    if (_print_child_pid_status == 0) {
-        handle_background(&num_tokens, &child_pid, tokens);
-    }
-
-    // handle regular process
-    else {
-        handle_process(&child_pid, tokens);
-        waitpid(child_pid, &exit_status, 0);
-
-        if (exit_status != 0) {
-            // delete_node(child_pid);
-            update_node(child_pid, EXITED, WEXITSTATUS(exit_status));
-            return;
-        }
-        
-        int status_code;
-        if (WIFEXITED(exit_status)) { 
-            status_code = WEXITSTATUS(exit_status);
-        }
-
-        update_node(child_pid, EXITED, status_code);
-
-    }
+    handle_process((int)num_tokens, tokens);
 
 }
 
