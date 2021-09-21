@@ -12,6 +12,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <string.h>
+#include <fcntl.h>
 
 #define RUNNING 1
 #define EXITED 2
@@ -30,6 +31,11 @@ typedef struct {
 
 // Declare list
 List *lst;
+
+// Declare functions
+int check_redirect(int num_tokens, char **tokens);
+int handle_redirect(int num_tokens, char **tokens);
+
 
 void insert_node_at(int pid, int status, int exit_status) {
         // instantiate new node, add data
@@ -189,6 +195,12 @@ int handle_process(int num_tokens, char **tokens) {
     // check if background process 
     int background_process_status = strcmp(tokens[num_tokens - 2], "&");
 
+    int r = check_redirect(num_tokens, tokens);
+    if (r == 1) {
+        int w = handle_redirect(num_tokens, tokens);
+        return w;
+    }
+
     // check if command is there
     if(access( tokens[0], F_OK ) == -1 ) {
         printf("%s not found\n", tokens[0]);
@@ -250,13 +262,21 @@ void handle_chain(int num_tokens, char **tokens) {
         
         if (strcmp(tokens[i], "&&") == 0) {
 
-            curr_commands[arr_index] = NULL;
-            int failure = handle_process(arr_index, curr_commands);
-            if (failure == 1) {
-                return;
+            // redirect part
+            int r = check_redirect(arr_index, tokens);
+            if (r == 1) {
+                int break_status = handle_redirect(arr_index, curr_commands);
+                if (break_status == 1) {
+                    return;
+                }
+            } else {
+                curr_commands[arr_index] = NULL;
+                int failure = handle_process(arr_index, curr_commands);
+                if (failure == 1) {
+                    return;
+                }
             }
             arr_index = 0;
-
         }
         
         else {
@@ -267,12 +287,29 @@ void handle_chain(int num_tokens, char **tokens) {
 
     }
 
-    curr_commands[arr_index] = NULL;
-    int failure = handle_process(arr_index, curr_commands);
-    if (failure == 1) {
-        return;
+    // redirect part
+    // printf("this: %s\n", curr_commands[0]);
+    // printf("this: %s\n", curr_commands[1]);
+    // printf("this: %s\n", curr_commands[2]);
+    // printf("this: %s\n", curr_commands[3]);
+    // printf("this: %s\n", curr_commands[4]);
+
+    int r = check_redirect(arr_index, curr_commands);
+    if (r == 1) {
+        int break_status = handle_redirect(arr_index, curr_commands);
+        if (break_status == 1) {
+            arr_index = 0;
+            return;
+        }
+        // printf(" did another redirect processsss\n");
+    } else {
+        curr_commands[arr_index] = NULL;
+        int failure = handle_process(arr_index, curr_commands);
+        if (failure == 1) {
+            return;
+        }
+        arr_index = 0;
     }
-    arr_index = 0;
 
 }
 
@@ -309,10 +346,117 @@ void handle_terminate(char pid[]) {
     
 }
 
+int check_redirect(int num_tokens, char **tokens) {
+    for (int i = 0; i < (int) num_tokens - 1; i++) {
+        if ((strcmp(tokens[i], "<") == 0) || (strcmp(tokens[i], ">") == 0) || (strcmp(tokens[i], "2>") == 0)) { 
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int handle_redirect(int num_tokens, char **tokens) {
+    // int background_status = 0;
+
+    int background_process_status = strcmp(tokens[num_tokens - 2], "&");
+    char *to_execute[num_tokens];
+
+    // build the input array
+    for (int i = 0; i < (int) num_tokens - 1; i++) {
+        if (strcmp(tokens[i], "<") == 0 || strcmp(tokens[i], ">") == 0 || strcmp(tokens[i], "2>") == 0) { 
+            to_execute[i] = NULL;
+            break;
+        } else {
+            to_execute[i] = tokens[i];
+        }
+    }
+
+    // check that file exists
+    for (int i = 0; i < (int) num_tokens - 1; i++) {
+        if (strcmp(tokens[i], "<") == 0) { 
+            // input_status = 1;
+
+            char *inp = tokens[i + 1];
+            if( access( inp, F_OK ) != 0 ) {
+                printf("%s does not exist\n", inp);
+                return 1;
+            }
+        }
+    }
+
+    int child_pid = fork();
+    if (child_pid == 0){
+
+        for (int i = 0; i < (int) num_tokens - 1; i++) {
+            if (strcmp(tokens[i], "<") == 0) { 
+                // input_status = 1;
+
+                char *input_file = tokens[i + 1];
+
+                int in = open(input_file, O_RDONLY);
+                dup2(in, 0);
+
+            } else if (strcmp(tokens[i], ">") == 0) { 
+                // output_status = 1;
+                char *output_file = tokens[i + 1];
+                int out = open(output_file, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IRGRP | S_IWGRP | S_IWUSR);
+                dup2(out, 1);          
+            } else if (strcmp(tokens[i], "2>") == 0) { 
+                // error_status = 1;
+
+                char *error_file = tokens[i + 1];
+                int err = open(error_file, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IRGRP | S_IWGRP | S_IWUSR);
+                dup2(err, 2);
+            // } else if (strcmp(tokens[i], "&") == 0) { 
+            //     background_status = 1;
+            } else {}
+        }
+
+        
+        execv(to_execute[0], to_execute);
+    }
+    
+    // check whether successful or not
+    insert_node_at(child_pid, RUNNING, 0);
+
+    // background process quits here
+    if (background_process_status == 0) {
+        printf("Child[%d] in background\n", child_pid);
+        return 0;
+    }
+
+    int exit_status;
+    int status_code;
+
+    waitpid(child_pid, &exit_status, 0);
+    
+    if (WIFEXITED(exit_status)) { 
+        status_code = WEXITSTATUS(exit_status);
+    }
+
+    update_node(child_pid, EXITED, status_code);
+
+    // for failed command execution
+    if (exit_status != 0) {
+        printf("%s failed\n", tokens[0]);
+        return 1;
+    }
+    
+    return 0;
+
+
+}
+
 // ORIGINAL PROCESS COMMAND
 
 void my_process_command(size_t num_tokens, char **tokens) {
     // Your code here, refer to the lab document for a description of the arguments
+
+    // <, >, 2> handling logic boolean
+    if (check_chain((int)num_tokens, tokens) == 1) {
+        handle_chain((int)num_tokens, tokens);
+        return;
+    }
 
     // info
     if (strcmp(tokens[0], "info") == 0) {
@@ -329,12 +473,6 @@ void my_process_command(size_t num_tokens, char **tokens) {
     // terminate
     if (strcmp(tokens[0], "terminate") == 0) {
         handle_terminate(tokens[1]);
-        return;
-    }
-
-    // && symbol chaining logic 
-    if (check_chain((int)num_tokens, tokens) == 1) {
-        handle_chain((int)num_tokens, tokens);
         return;
     }
 
