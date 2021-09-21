@@ -62,54 +62,54 @@ void insert_node_at(int pid, int status, int exit_status) {
 
 }
 
-void delete_node(int pid) {
-    node* nodeToDelete;
-	node* headNode = lst->head;
+// void delete_node(int pid) {
+//     node* nodeToDelete;
+// 	node* headNode = lst->head;
 
-	if (headNode == NULL) {
-		return;
-	}
+// 	if (headNode == NULL) {
+// 		return;
+// 	}
 
-	else if (headNode->next == NULL) {
-		free(headNode);
-		lst->head = NULL;
-	}
+// 	else if (headNode->next == NULL) {
+// 		free(headNode);
+// 		lst->head = NULL;
+// 	}
 
-	else if (headNode->pid == pid) {
-		node* nextNode;
-		node* lastNode;
+// 	else if (headNode->pid == pid) {
+// 		node* nextNode;
+// 		node* lastNode;
 
-		nodeToDelete = headNode;
-		nextNode = nodeToDelete->next;
+// 		nodeToDelete = headNode;
+// 		nextNode = nodeToDelete->next;
 		
-		lastNode = nodeToDelete->next;
-		while (lastNode->next != headNode) {
-			lastNode = lastNode->next;
-		}
+// 		lastNode = nodeToDelete->next;
+// 		while (lastNode->next != headNode) {
+// 			lastNode = lastNode->next;
+// 		}
 		
-		lst->head = nextNode;
+// 		lst->head = nextNode;
 
-		free(nodeToDelete);
+// 		free(nodeToDelete);
 
-	}
+// 	}
 
-	else {
-		node* nextNode;
-        node* previousNode;
+// 	else {
+// 		node* nextNode;
+//         node* previousNode;
 		
-		nextNode = lst->head;
+// 		nextNode = lst->head;
 
-		while (nextNode->pid != pid){
-			previousNode = nextNode;
-            nextNode = nextNode->next;
-		}
+// 		while (nextNode->pid != pid){
+// 			previousNode = nextNode;
+//             nextNode = nextNode->next;
+// 		}
 
-		previousNode->next = nextNode->next;
+// 		previousNode->next = nextNode->next;
 
-		free(nextNode);
+// 		free(nextNode);
 
-	}
-}
+// 	}
+// }
 
 void update_node(int pid, int status, int exit_status) {
     node* currNode;
@@ -431,7 +431,8 @@ void my_process_command(size_t num_tokens, char **tokens) {
         waitpid(child_pid, &exit_status, 0);
 
         if (exit_status != 0) {
-            delete_node(child_pid);
+            // delete_node(child_pid);
+            update_node(child_pid, EXITED, WEXITSTATUS(exit_status));
             return;
         }
         
