@@ -169,11 +169,11 @@ void my_quit(void) {
         
         int result = waitpid(pid, &new_status, WNOHANG);
         if (result == 0) {
-            if (!WIFEXITED(new_status)) {
-                kill(pid, SIGTERM);
-                int s = waitpid(pid, &new_status, 0);
-                s += 1;
-            }
+            // if (!WIFEXITED(new_status)) {
+            kill(pid, SIGTERM);
+            int s = waitpid(pid, &new_status, 0);
+            s += 1;
+            // }
         }
         curr = curr->next;
 
