@@ -13,7 +13,6 @@ typedef struct {
     int group_index;
     int occupied_table_capacity;
     sem_t *internal_sem;
-    int has_served;
     TAILQ_ENTRY(group_state) entries;
 
 } group_state;

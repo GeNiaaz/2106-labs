@@ -111,6 +111,8 @@ int request_for_table(group_state *state, int num_people) {
                 state->table_num = result_table_num;
                 state->occupied_table_capacity = t;
 
+                printf("FOUND A SPACE\n");
+
                 sem_post(&table_semaphores[0]);
 
                 return result_table_num;
@@ -153,7 +155,6 @@ void leave_table(group_state *state) {
     for (curr_state = TAILQ_FIRST(&my_tailq_head); curr_state != NULL && curr_state->queue_num < 2000 && curr_state->queue_num > -5; curr_state = next_state) {
         next_state = TAILQ_NEXT(curr_state, entries);
 
-        printf("QUEUE HAS %d\n", curr_state->queue_num);
 
         // printf("%d\n", state->occupied_table_capacity);
         // printf("%d\n", curr_state->num_people);
@@ -176,7 +177,6 @@ void leave_table(group_state *state) {
         }
     }
 
-    printf("DIDNT ENTER HTE LOOP\n");
     table_occupied_status[state->occupied_table_capacity][state->table_index] = 0;
     sem_post(&table_semaphores[0]);
 
