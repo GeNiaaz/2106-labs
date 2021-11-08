@@ -15,9 +15,11 @@ int main(int argc, char *argv[]) {
   if (!mem) {
     return 1;
   }
-
   size_t scratch = 0;
+  // printf("here: %ld\n", memory_size / sizeof(size_t));
   for (size_t i = 0; i < memory_size / sizeof(size_t); ++i) {
+    // int left = memory_size / sizeof(size_t) - i;
+    // printf("this much left %d\n", left);
     scratch += mem[i];
   }
 
