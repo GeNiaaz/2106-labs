@@ -20,6 +20,8 @@ int main(int argc, char *argv[]) {
     mem[i] = (uintptr_t)(mem + i);
   }
 
+  // exit(1);
+
   _Bool failed = 0;
   for (size_t i = 0; i < memory_size / sizeof(uintptr_t); ++i) {
     if (mem[i] != (uintptr_t)(mem + i)) {

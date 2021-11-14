@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <sys/queue.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <string.h>
 
 
 
@@ -11,22 +14,33 @@
 #define READ 1
 #define WRITE 2
 
-#define DIRTY 5;
-#define CLEAN 10;
+#define OUT_OF_SWAP 5
+#define IN_SWAP 10
+
+#define OCCUPIED 1
+#define UNOCCUPIED 0
+
+#define FILE_UNOPENED 0
+#define FILE_OPEN 1
 
 // variables
 
 size_t MAX_PAGES = 2106;
 int CURR_PAGES = 0;
 int PAGE_SIZE = 4096;
-int eviction_counter = 0;
+int file_d;
+int file_open_status = 0;
 
+int eviction_counter = 0;
+int counter_2 = 0;
+int fault_counter = 0;
 
 typedef struct PAGE {
-   void *offset;
+   void *page_addr;
    void *region_addr;
    int status;
-   int is_dirty;
+   int in_swap;
+   int swap_offset;
 } page;
 
 typedef struct REGION{
@@ -42,6 +56,19 @@ typedef struct {
   region *tail;
 } List2;
 
+// swap structs
+
+typedef struct SWAP{
+  int offset_in_swap;
+  void *page_addr;
+  int occupied;
+  struct SWAP *next;
+} swap;
+
+typedef struct {
+  swap *head;
+  // region *tail;
+} List_swap;
 
 // Queue implementation
 
@@ -55,12 +82,16 @@ struct tailq_entry {
 TAILQ_HEAD(, tailq_entry) my_tailq_head;
 
 
+// list declarations
+List_swap *lst_swap;
 List2 *lst2;
 
 int init_status = 0;
 
 void init() {
   lst2 = (List2*)malloc(sizeof(List2));
+  lst_swap = (List_swap*)malloc(sizeof(List_swap));
+
   init_status = 1;
 
   TAILQ_INIT(&my_tailq_head);
@@ -91,10 +122,10 @@ void add_to_list_2(int multiple, int size, void *start_address) {
   new_region->arr_pages = arr_pages;
 
   for (int i = 0; i < multiple; i++) {
-    arr_pages[i].status = 0;
-    arr_pages[i].offset = i * 4096 + start_address;
+    arr_pages[i].status = NON;
+    arr_pages[i].page_addr = i * 4096 + start_address;
     arr_pages[i].region_addr = start_address;
-    arr_pages[i].is_dirty = CLEAN;
+    arr_pages[i].in_swap = OUT_OF_SWAP;
   }
 
 }
@@ -228,8 +259,144 @@ void add_to_tailq(void *addr, page *page_ptr) {
 }
 
 
-// do the swap shit here
-void evict_page_to_swap(page *curr_page) {
+// add condition to check if file alr exists or not
+void create_file() {
+
+    if (file_open_status == FILE_OPEN) {
+      return;
+    }
+    int pid = getpid();
+    char* filename = (char *)malloc(12); 
+    sprintf(filename, "%d", pid);
+    strcat(filename, ".swap");
+
+    file_d = open(filename, O_RDWR | O_TRUNC | O_CREAT, S_IRUSR | S_IWUSR);
+
+
+}
+
+/* SWAP SHIT HERE */
+
+int get_next_free_swap_offset() {
+  
+  swap *new_swap;
+  swap *curr_swap;
+
+  // list empty
+  if (lst_swap->head == NULL) {
+
+    curr_swap = (swap*)malloc(sizeof(swap));
+
+    curr_swap->next = NULL;
+    curr_swap->occupied = OCCUPIED;
+    curr_swap->offset_in_swap = 0;
+
+    return 0;
+
+  } else {
+
+    // check if any swap empty
+    curr_swap = lst_swap->head;
+    int curr_offset = curr_swap->offset_in_swap;
+
+    while (curr_swap->next != NULL) {
+      if (curr_swap->occupied == UNOCCUPIED) {
+        curr_offset = curr_swap->offset_in_swap;
+        curr_swap->occupied = OCCUPIED;
+        break;
+      } 
+    }
+
+    // for last item in offset list
+    curr_offset = curr_swap->offset_in_swap;
+
+    if (curr_swap->occupied == UNOCCUPIED) {
+      curr_swap->occupied = OCCUPIED;
+
+      return curr_offset;
+    } 
+
+    // offset to last
+    curr_offset += PAGE_SIZE;
+
+    // nothing free, create new offset entry to list
+    new_swap = (swap*)malloc(sizeof(swap));
+
+    // set this back of the list
+    curr_swap->next = new_swap;
+
+    curr_swap->next = NULL;
+    curr_swap->occupied = OCCUPIED;
+    curr_swap->offset_in_swap = curr_offset;
+
+
+    printf("offset: %d", curr_offset);
+    return curr_offset;
+
+  }
+}
+
+page* load_from_swap(int offset_to_load_from) {
+  
+  // create new page
+  page *swap_page = (page*)malloc(sizeof(page));
+
+  // file related
+  create_file();
+
+  // JIM FIX GYM
+  mprotect(swap_page, sizeof(page), PROT_WRITE | PROT_READ);
+  int success = pread(file_d, swap_page, sizeof(page), offset_to_load_from);
+
+  if (success == -1) {
+    printf("failed on line 354\n");
+    exit(1);
+  }
+
+  return swap_page;
+}
+
+void write_to_swap(page *page_addr) {
+  int offset_to_write_to = get_next_free_swap_offset();
+  page_addr->swap_offset = offset_to_write_to;
+
+  // write here
+  create_file();
+
+  mprotect(page_addr, sizeof(page), PROT_WRITE | PROT_READ);
+  int success = pwrite(file_d, page_addr, sizeof(page), offset_to_write_to);
+
+  if (success == -1) {
+    printf("failed on line 354\n");
+    exit(1);
+  }
+
+}
+
+void remove_from_swap(page *curr_page) {
+  int offset = curr_page->swap_offset;
+  swap *curr_swap;
+
+  curr_swap = (swap*)malloc(sizeof(swap));
+
+  mprotect(curr_page, sizeof(swap), PROT_WRITE | PROT_READ);
+  int success = pread(file_d, curr_swap, sizeof(page), offset);
+
+  if (success == -1) {
+    printf("failed on line 354\n");
+    exit(1);
+  }
+
+  curr_swap->occupied = UNOCCUPIED;
+
+  // JIM FIX GYM
+  mprotect(curr_swap, sizeof(swap), PROT_WRITE | PROT_READ);
+  int success_2 = pwrite(file_d, curr_swap, sizeof(page), offset);
+
+  if (success_2 == -1) {
+    printf("failed on line 354\n");
+    exit(1);
+  }
 
 }
 
@@ -242,19 +409,53 @@ void evict_page_from_queue() {
   struct tailq_entry *first_item;
   first_item = TAILQ_FIRST(&my_tailq_head);
 
-  evict_page_to_swap(first_item->page_itself);
-
   TAILQ_REMOVE(&my_tailq_head, first_item, entries);
 
 }
 
+void free_physical_page(void *addr) {
+  madvise(addr, PAGE_SIZE, MADV_DONTNEED);
+  mprotect(addr, PAGE_SIZE, PROT_READ);
+}
+
+// do the swap shit here,IF DIRTY
+void evict_page_to_swap() {
+
+  // get top of queue
+  struct tailq_entry *first_item;
+  first_item = TAILQ_FIRST(&my_tailq_head);
+
+  page *curr_page = first_item->page_itself;
+
+  if (curr_page->status == WRITE) {
+    curr_page->status = NON;
+    write_to_swap(curr_page);
+  }
+  
+  free_physical_page(curr_page->page_addr);
+  // create_file();
+
+}
+
+
 void page_fault_handler(void *addr) {
+  
+  // TO DELETE
+  printf("fault counter: %d\n", fault_counter);
+  fault_counter++;
 
   void *addr_to_handle = addr;
   // int size_to_use = get_size(addr_to_handle);
 
   page *curr_page = get_page(addr_to_handle);
+
+  if (curr_page == NULL) {
+    return;
+  }
+
   int page_status = curr_page->status;
+
+  printf("this page has %d\n", curr_page->status);
 
   if (page_status == NON) {
     curr_page->status = READ;
@@ -263,9 +464,29 @@ void page_fault_handler(void *addr) {
 
     // evict 1 page
     if (CURR_PAGES == (int)MAX_PAGES) {
+      
+      evict_page_to_swap();
       evict_page_from_queue();
+    
     } else {
       CURR_PAGES++;
+    }
+
+
+    // in swap, load 
+    if (curr_page->in_swap == IN_SWAP) {
+
+      // load into the same memory from the offset
+      page *tmp_swap_page; 
+      tmp_swap_page = load_from_swap(curr_page->swap_offset);
+      curr_page = tmp_swap_page;
+
+      curr_page->status = READ;
+
+    // OUT OF SWAP
+    } else if (curr_page->in_swap == OUT_OF_SWAP) {
+      curr_page->in_swap = IN_SWAP;
+      write_to_swap(curr_page);
     }
 
     add_to_tailq(addr, curr_page);
@@ -274,6 +495,7 @@ void page_fault_handler(void *addr) {
   } else if (page_status == READ) {
     curr_page->status = WRITE;
     mprotect(addr_to_handle, PAGE_SIZE, PROT_READ | PROT_WRITE);
+
   } else if (page_status == WRITE) {
     
   } else {
@@ -294,6 +516,10 @@ void userswap_set_size(size_t size) {
 }
 
 void *userswap_alloc(size_t size) {
+
+  // open file
+  create_file();
+  file_open_status = FILE_OPEN;
 
   // sigsev handler
   struct sigaction sa;
@@ -327,6 +553,8 @@ void *userswap_alloc(size_t size) {
 // clear up alloc'd things
 void userswap_free(void *mem) {
   int size_unmap = remove_from_list_2(mem);
+
+  remove_from_swap(mem);
   munmap(mem, size_unmap);
 
 }
@@ -334,8 +562,3 @@ void userswap_free(void *mem) {
 void *userswap_map(int fd, size_t size) {
   return NULL;
 }
-
-
-// when do i do the check on max pages.
-
-// after the page fault handler or...
