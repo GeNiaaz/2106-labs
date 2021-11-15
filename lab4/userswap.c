@@ -58,11 +58,11 @@ typedef struct {
 
 // swap structs
 
-typedef struct SWAP{
+typedef struct swap{
   int offset_in_swap;
   void *page_addr;
   int occupied;
-  struct SWAP *next;
+  struct swap *next;
 } swap;
 
 typedef struct {
@@ -286,6 +286,7 @@ int get_next_free_swap_offset() {
   if (lst_swap->head == NULL) {
 
     curr_swap = (swap*)malloc(sizeof(swap));
+    lst_swap->head = curr_swap;
 
     curr_swap->next = NULL;
     curr_swap->occupied = OCCUPIED;
@@ -295,6 +296,8 @@ int get_next_free_swap_offset() {
 
   } else {
 
+    curr_swap = (swap*)malloc(sizeof(swap));
+    
     // check if any swap empty
     curr_swap = lst_swap->head;
     int curr_offset = curr_swap->offset_in_swap;
@@ -303,8 +306,9 @@ int get_next_free_swap_offset() {
       if (curr_swap->occupied == UNOCCUPIED) {
         curr_offset = curr_swap->offset_in_swap;
         curr_swap->occupied = OCCUPIED;
-        break;
+        return curr_offset;
       } 
+      curr_swap = curr_swap->next;
     }
 
     // for last item in offset list
@@ -325,45 +329,45 @@ int get_next_free_swap_offset() {
     // set this back of the list
     curr_swap->next = new_swap;
 
-    curr_swap->next = NULL;
-    curr_swap->occupied = OCCUPIED;
-    curr_swap->offset_in_swap = curr_offset;
+    new_swap->next = NULL;
+    new_swap->occupied = OCCUPIED;
+    new_swap->offset_in_swap = curr_offset;
 
-
-    printf("offset: %d", curr_offset);
     return curr_offset;
 
   }
 }
 
-page* load_from_swap(int offset_to_load_from) {
+void load_from_swap(page *curr_page, int offset_to_load_from) {
   
   // create new page
-  page *swap_page = (page*)malloc(sizeof(page));
+  // page *swap_page = (page*)malloc(sizeof(page));
 
   // file related
   create_file();
 
   // JIM FIX GYM
-  mprotect(swap_page, sizeof(page), PROT_WRITE | PROT_READ);
-  int success = pread(file_d, swap_page, sizeof(page), offset_to_load_from);
+  // mprotect(swap_page, sizeof(page), PROT_WRITE | PROT_READ);
+  int success = pread(file_d, curr_page, sizeof(page), offset_to_load_from);
 
   if (success == -1) {
     printf("failed on line 354\n");
     exit(1);
   }
 
-  return swap_page;
+  // return swap_page;
 }
 
 void write_to_swap(page *page_addr) {
   int offset_to_write_to = get_next_free_swap_offset();
+  printf("offset %d\n", offset_to_write_to);
   page_addr->swap_offset = offset_to_write_to;
 
   // write here
   create_file();
 
-  mprotect(page_addr, sizeof(page), PROT_WRITE | PROT_READ);
+  // JIM FIX GYM
+  // mprotect(page_addr, sizeof(page), PROT_WRITE | PROT_READ);
   int success = pwrite(file_d, page_addr, sizeof(page), offset_to_write_to);
 
   if (success == -1) {
@@ -379,22 +383,23 @@ void remove_from_swap(page *curr_page) {
 
   curr_swap = (swap*)malloc(sizeof(swap));
 
-  mprotect(curr_page, sizeof(swap), PROT_WRITE | PROT_READ);
+  // JIM FIX GYM
+  // mprotect(curr_page, sizeof(swap), PROT_WRITE | PROT_READ);
   int success = pread(file_d, curr_swap, sizeof(page), offset);
 
   if (success == -1) {
-    printf("failed on line 354\n");
+    printf("failed on line 386\n");
     exit(1);
   }
 
   curr_swap->occupied = UNOCCUPIED;
 
   // JIM FIX GYM
-  mprotect(curr_swap, sizeof(swap), PROT_WRITE | PROT_READ);
+  // mprotect(curr_swap, sizeof(swap), PROT_WRITE | PROT_READ);
   int success_2 = pwrite(file_d, curr_swap, sizeof(page), offset);
 
   if (success_2 == -1) {
-    printf("failed on line 354\n");
+    printf("failed on line 397\n");
     exit(1);
   }
 
@@ -404,7 +409,7 @@ void remove_from_swap(page *curr_page) {
 void evict_page_from_queue() {
 
   eviction_counter++;
-  printf("%d\n", eviction_counter);
+  printf("eviction count: %d\n", eviction_counter);
 
   struct tailq_entry *first_item;
   first_item = TAILQ_FIRST(&my_tailq_head);
@@ -415,7 +420,7 @@ void evict_page_from_queue() {
 
 void free_physical_page(void *addr) {
   madvise(addr, PAGE_SIZE, MADV_DONTNEED);
-  mprotect(addr, PAGE_SIZE, PROT_READ);
+  mprotect(addr, PAGE_SIZE, PROT_NONE);
 }
 
 // do the swap shit here,IF DIRTY
@@ -429,7 +434,16 @@ void evict_page_to_swap() {
 
   if (curr_page->status == WRITE) {
     curr_page->status = NON;
-    write_to_swap(curr_page);
+    if (curr_page->in_swap == IN_SWAP) {
+      // load_from_swap(curr_page, curr_page->swap_offset);
+      int success = pwrite(file_d, curr_page, sizeof(page), curr_page->swap_offset);
+      if (success == -1) {
+        printf("error 54");
+        exit(1);
+      }
+    } else {
+      write_to_swap(curr_page);
+    }
   }
   
   free_physical_page(curr_page->page_addr);
@@ -444,7 +458,7 @@ void page_fault_handler(void *addr) {
   printf("fault counter: %d\n", fault_counter);
   fault_counter++;
 
-  void *addr_to_handle = addr;
+  void *addr_to_handle = addr; //make it page aligned
   // int size_to_use = get_size(addr_to_handle);
 
   page *curr_page = get_page(addr_to_handle);
@@ -464,10 +478,10 @@ void page_fault_handler(void *addr) {
 
     // evict 1 page
     if (CURR_PAGES == (int)MAX_PAGES) {
-      
+    
       evict_page_to_swap();
       evict_page_from_queue();
-    
+
     } else {
       CURR_PAGES++;
     }
@@ -477,9 +491,9 @@ void page_fault_handler(void *addr) {
     if (curr_page->in_swap == IN_SWAP) {
 
       // load into the same memory from the offset
-      page *tmp_swap_page; 
-      tmp_swap_page = load_from_swap(curr_page->swap_offset);
-      curr_page = tmp_swap_page;
+      // page *tmp_swap_page; 
+      load_from_swap(curr_page, curr_page->swap_offset);
+      // curr_page = tmp_swap_page;
 
       curr_page->status = READ;
 
@@ -487,14 +501,17 @@ void page_fault_handler(void *addr) {
     } else if (curr_page->in_swap == OUT_OF_SWAP) {
       curr_page->in_swap = IN_SWAP;
       write_to_swap(curr_page);
+    } else {
+      printf("error: line 498");
+      exit(1);
     }
 
     add_to_tailq(addr, curr_page);
-    mprotect(addr_to_handle, PAGE_SIZE, PROT_READ);
+    mprotect(curr_page->page_addr, PAGE_SIZE, PROT_READ);
 
   } else if (page_status == READ) {
     curr_page->status = WRITE;
-    mprotect(addr_to_handle, PAGE_SIZE, PROT_READ | PROT_WRITE);
+    mprotect(curr_page->page_addr, PAGE_SIZE, PROT_READ | PROT_WRITE);
 
   } else if (page_status == WRITE) {
     
