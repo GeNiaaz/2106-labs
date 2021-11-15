@@ -347,8 +347,9 @@ void write_to_swap(page *curr_page) {
   create_file();
 
   // JIM FIX GYM
-  // mprotect(page_addr, sizeof(page), PROT_WRITE | PROT_READ);
-  int success = pwrite(file_d, curr_page->page_addr, PAGE_SIZE, offset_to_write_to);
+  mprotect(curr_page->page_addr, PAGE_SIZE, PROT_WRITE | PROT_READ);
+  int success = pwrite(file_d, curr_page->page_addr, PAGE_SIZE, curr_page->swap_offset);
+  mprotect(curr_page->page_addr, PAGE_SIZE, PROT_READ);
 
   // printf("%p\n", curr_page->page_addr);
   // printf("%d\n", offset_to_write_to);
@@ -528,8 +529,7 @@ void *userswap_alloc(size_t size) {
   }
   start_addr = mmap (NULL, page_multiple_size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
-  add_to_list_2(multiple, page_multiple_size, start_addr);
-  printf("ptrrr %p\n", start_addr);
+  add_to_list_2(multiple, size, start_addr);
 
   return start_addr;
 
@@ -560,7 +560,42 @@ void userswap_free(void *mem) {
 }
 
 void *userswap_map(int fd, size_t size) {
-  return NULL;
+//   struct sigaction another_action;
+//   another_action.sa_sigaction = handler;
+//   another_action.sa_flags = SA_SIGINFO;
+//   sigaction(SIGSEGV, &another_action, NULL);
+
+//   int page_multiple_size = size;
+
+//   int remainder = size % PAGE_SIZE;
+//   if (remainder != 0) {
+//     page_multiple_size = size + PAGE_SIZE - remainder;
+//   }
+
+//   int multiple = 0;
+//   if (size % 4096 == 0) {
+//     multiple = size / PAGE_SIZE;
+//   } else {
+//     multiple = (size / PAGE_SIZE) + 1;
+//   }
+
+//   struct stat f_info;
+//   fstat(fd, &f_info);
+//   size_t f_size = f_info.st_size;
+//   if ((int)f_size < page_multiple_size) {
+//     int result = ftruncate(fd, page_multiple_size);
+//     if (result == -1) {
+//       printf("Error truncating file\n");
+//     }
+//   }
+
+//   void* start_addr = mmap(NULL, page_multiple_size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+
+//   add_to_list_2(multiple, size, start_addr);
+
+//   return start_addr;
+
+    return NULL;
 }
 
 // void remove_from_swap(void *addr) {
