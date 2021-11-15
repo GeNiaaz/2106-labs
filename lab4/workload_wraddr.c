@@ -15,7 +15,6 @@ int main(int argc, char *argv[]) {
   if (!mem) {
     return 1;
   }
-
   for (size_t i = 0; i < memory_size / sizeof(uintptr_t); ++i) {
     mem[i] = (uintptr_t)(mem + i);
   }
